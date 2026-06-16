@@ -325,33 +325,6 @@ services:
         condition: service_healthy
 
   # ============================================
-  # 微服务 - 支付服务 (8085)
-  # ============================================
-  homeservice-payment:
-    <<: *microservice-base
-    container_name: homeservice-payment
-    build:
-      context: ./homeservice
-      dockerfile: Dockerfile.local
-      args:
-        MODULE: homeservice-payment
-    ports:
-      - "8085:8085"
-    environment:
-      <<: [*common-env, *db-env, *redis-env, *rabbitmq-env, *seata-env]
-      SERVER_PORT: "8085"
-      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
-    depends_on:
-      nacos-init:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-      seata-server:
-        condition: service_healthy
-
-  # ============================================
   # 微服务 - 评价服务 (8086)
   # ============================================
   homeservice-review:
@@ -413,29 +386,6 @@ services:
     environment:
       <<: [*common-env, *db-env, *redis-env]
       SERVER_PORT: "8088"
-      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
-    depends_on:
-      nacos-init:
-        condition: service_completed_successfully
-      redis:
-        condition: service_healthy
-
-  # ============================================
-  # 微服务 - 定位服务 (8089)
-  # ============================================
-  homeservice-location:
-    <<: *microservice-base
-    container_name: homeservice-location
-    build:
-      context: ./homeservice
-      dockerfile: Dockerfile.local
-      args:
-        MODULE: homeservice-location
-    ports:
-      - "8089:8089"
-    environment:
-      <<: [*common-env, *redis-env]
-      SERVER_PORT: "8089"
       JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
     depends_on:
       nacos-init:
