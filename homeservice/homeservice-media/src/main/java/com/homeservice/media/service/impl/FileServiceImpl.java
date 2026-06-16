@@ -59,7 +59,7 @@ public class FileServiceImpl extends ServiceImpl<MediaFileMapper, MediaFile> imp
         try {
             file.transferTo(destFile);
         } catch (IOException e) {
-            log.error("文件存储失败: {}", fileKey, e);
+            log.error(String.format("文件存储失败: %s", fileKey), e);
             throw new RuntimeException("文件存储失败");
         }
 
@@ -78,7 +78,7 @@ public class FileServiceImpl extends ServiceImpl<MediaFileMapper, MediaFile> imp
         mediaFile.setStatus(1);
 
         save(mediaFile);
-        log.info("文件上传成功: id={}, key={}, size={}", mediaFile.getId(), fileKey, file.getSize());
+        log.info(String.format("文件上传成功: id=%s, key=%s, size=%s", mediaFile.getId(), fileKey, file.getSize()));
         return mediaFile;
     }
 

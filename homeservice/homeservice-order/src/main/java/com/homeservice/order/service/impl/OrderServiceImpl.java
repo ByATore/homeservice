@@ -284,11 +284,11 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     public boolean payOrder(Long orderId, Integer paymentMethod, String transactionId) {
         Order order = getById(orderId);
         if (order == null) {
-            log.warn("支付失败：订单不存在, orderId={}", orderId);
+            log.warn(String.format("支付失败：订单不存在, orderId=%s", orderId));
             return false;
         }
         if (order.getStatus() != 1) {
-            log.warn("支付失败：订单状态不允许支付, orderId={}, status={}", orderId, order.getStatus());
+            log.warn(String.format("支付失败：订单状态不允许支付, orderId=%s, status=%s", orderId, order.getStatus()));
             return false;
         }
         order.setPaymentMethod(paymentMethod);
@@ -309,7 +309,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     public boolean updatePayStatus(Long orderId, String paymentNo, String transactionId) {
         Order order = getById(orderId);
         if (order == null) {
-            log.warn("更新支付状态失败：订单不存在, orderId={}", orderId);
+            log.warn(String.format("更新支付状态失败：订单不存在, orderId=%s", orderId));
             return false;
         }
         order.setPaymentNo(paymentNo);
@@ -329,7 +329,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     public boolean refundOrder(Long orderId, BigDecimal refundAmount, String reason) {
         Order order = getById(orderId);
         if (order == null) {
-            log.warn("退款失败：订单不存在, orderId={}", orderId);
+            log.warn(String.format("退款失败：订单不存在, orderId=%s", orderId));
             return false;
         }
         order.setStatus(9); // 已退款
