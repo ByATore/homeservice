@@ -16,6 +16,11 @@ public class LocationFeignClientFallbackFactory implements FallbackFactory<Locat
             public com.homeservice.common.result.Result<java.util.List<java.util.Map<String, Object>>> getNearbyWorkers(Double latitude, Double longitude, Integer radius) {
                 return com.homeservice.common.result.Result.error("定位服务不可用");
             }
+
+            @Override
+            public com.homeservice.common.result.Result<java.util.Map<String, Object>> getWorkerLocation(Long workerId) {
+                return com.homeservice.common.result.Result.error("定位服务不可用");
+            }
         };
     }
 }
