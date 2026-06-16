@@ -165,35 +165,35 @@ services:
     networks:
       - homeservice-net
 
-  # Seata 1.8.0 - 分布式事务协调器
-  seata-server:
-    image: seataio/seata-server:1.8.0
-    container_name: homeservice-seata
-    restart: unless-stopped
-    ports:
-      - "8091:8091"
-      - "7091:7091"
-    environment:
-      - SEATA_PORT=8091
-      - SEATA_IP=homeservice-seata
-      - STORE_MODE=db
-      - SERVER_NODE=1
-    volumes:
-      - ./config/seata-server-application.yml:/seata-server/config/application.yml:ro
-      - seata-logs:/seata-server/logs
-    depends_on:
-      mysql:
-        condition: service_healthy
-      nacos:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -s http://localhost:7091 || exit 1"]
-      interval: 15s
-      timeout: 10s
-      retries: 15
-      start_period: 40s
-    networks:
-      - homeservice-net
+  # Seata 已禁用 - 端口冲突
+  # seata-server:
+  #   image: seataio/seata-server:1.8.0
+  #   container_name: homeservice-seata
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8091:8091"
+  #     - "7091:7091"
+  #   environment:
+  #     - SEATA_PORT=8091
+  #     - SEATA_IP=homeservice-seata
+  #     - STORE_MODE=db
+  #     - SERVER_NODE=1
+  #   volumes:
+  #     - ./config/seata-server-application.yml:/seata-server/config/application.yml:ro
+  #     - seata-logs:/seata-server/logs
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #     nacos:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "curl -s http://localhost:7091 || exit 1"]
+  #     interval: 15s
+  #     timeout: 10s
+  #     retries: 15
+  #     start_period: 40s
+  #   networks:
+  #     - homeservice-net
 
   # Nacos 初始化 - 导入配置
   nacos-init:
@@ -442,8 +442,9 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-      seata-server:
-        condition: service_healthy
+      # seata-server 已禁用
+      # seata-server:
+      #   condition: service_healthy
 
   # ============================================
   # 微服务 - 调度派单服务 (8093)
