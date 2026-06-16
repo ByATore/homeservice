@@ -179,7 +179,7 @@ services:
       - STORE_MODE=db
       - SERVER_NODE=1
     volumes:
-      - ./config/seata-server-application.yml:/seata-server/resources/application.yml:ro
+      - ./config/seata-server-application.yml:/seata-server/config/application.yml:ro
       - seata-logs:/seata-server/logs
     depends_on:
       mysql:
