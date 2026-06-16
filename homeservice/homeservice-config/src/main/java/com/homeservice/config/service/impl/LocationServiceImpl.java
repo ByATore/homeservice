@@ -65,7 +65,7 @@ public class LocationServiceImpl implements LocationService {
         try {
             // 使用 Redis GEORADIUS 替代 KEYS * 遍历
             Circle circle = new Circle(new Point(longitude, latitude),
-                    new Distance(radius, Metrics.METERS));
+                    new Distance(radius / 1000.0, Metrics.KILOMETERS));
             RedisGeoCommands.GeoRadiusCommandArgs args = RedisGeoCommands.GeoRadiusCommandArgs
                     .newGeoRadiusArgs()
                     .includeDistance()
