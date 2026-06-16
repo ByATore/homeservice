@@ -7,7 +7,7 @@ spring:
 
 logging:
   file:
-    path: /seata-server/logs
+    path: /root/logs/seata
   level:
     io.seata: info
 
@@ -23,7 +23,7 @@ seata:
     type: nacos
     nacos:
       application: seata-server
-      server-addr: nacos:8848
+      server-addr: localhost:8848
       namespace: homeservice
       group: SEATA_GROUP
       username: nacos
@@ -31,21 +31,25 @@ seata:
 
   store:
     mode: db
+    session:
+      mode: db
+    lock:
+      mode: db
     db:
       datasource: druid
-      dbType: mysql
-      driverClassName: com.mysql.cj.jdbc.Driver
-      url: jdbc:mysql://mysql:3306/seata?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+      db-type: mysql
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://localhost:3306/seata?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
       user: root
       password: lw211014ly
-      minConn: 5
-      maxConn: 100
-      globalTable: global_table
-      branchTable: branch_table
-      lockTable: lock_table
-      distributedLockTable: distributed_lock
-      queryLimit: 100
-      maxWait: 5000
+      min-conn: 5
+      max-conn: 100
+      global-table: global_table
+      branch-table: branch_table
+      lock-table: lock_table
+      distributed-lock-table: distributed_lock
+      query-limit: 100
+      max-wait: 5000
 
   server:
     servicePort: 8091

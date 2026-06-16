@@ -7,7 +7,7 @@ spring:
 
 logging:
   file:
-    path: /seata-server/logs
+    path: /root/logs/seata
   level:
     io.seata: info
 
@@ -18,8 +18,10 @@ console:
 
 seata:
   config:
+    # support: nacos, consul, apollo, zk, etcd3
     type: file
   registry:
+    # support: nacos, eureka, redis, zk, consul, etcd3, sofa
     type: nacos
     nacos:
       application: seata-server
@@ -30,28 +32,35 @@ seata:
       password: nacos
 
   store:
+    # support: file 、 db 、 redis
     mode: db
+    session:
+      mode: db
+    lock:
+      mode: db
     db:
       datasource: druid
-      dbType: mysql
-      driverClassName: com.mysql.cj.jdbc.Driver
+      db-type: mysql
+      driver-class-name: com.mysql.cj.jdbc.Driver
       url: jdbc:mysql://mysql:3306/seata?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
       user: root
       password: lw211014ly
-      minConn: 5
-      maxConn: 100
-      globalTable: global_table
-      branchTable: branch_table
-      lockTable: lock_table
-      distributedLockTable: distributed_lock
-      queryLimit: 100
-      maxWait: 5000
+      min-conn: 5
+      max-conn: 100
+      global-table: global_table
+      branch-table: branch_table
+      lock-table: lock_table
+      distributed-lock-table: distributed_lock
+      query-limit: 100
+      max-wait: 5000
 
   server:
+    # ⚠️ 注意：以下属性使用 camelCase，因 Seata 代码中 @Value 注解使用精确名称
     servicePort: 8091
     enableAutoDataSourceProxy: false
 
   security:
+    # ⚠️ 注意：以下属性使用 camelCase，因 Seata 代码中 @Value 注解使用精确名称
     secretKey: SeataSecretKey2024
     tokenValidityInMilliseconds: 1800000
     ignore:
