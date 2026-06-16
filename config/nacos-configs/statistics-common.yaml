@@ -1,0 +1,8 @@
+# Statistics 服务共享配置 (Nacos)
+# dataId: statistics-common.yaml
+# group: DEFAULT_GROUP
+
+statistics:
+  # 统计配置
+  aggregate-hour: 2
+  retention-days: 365

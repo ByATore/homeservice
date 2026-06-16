@@ -1,0 +1,584 @@
+# ============================================
+# 家政上门服务系统 - 全服务容器化编排
+# 包含：基础设施 + 13 个微服务
+# 启动: docker-compose up -d
+# 构建: docker-compose build
+# ============================================
+
+x-common-env: &common-env
+  TZ: Asia/Shanghai
+  SPRING_CLOUD_NACOS_DISCOVERY_SERVER_ADDR: nacos:8848
+  SPRING_CLOUD_NACOS_CONFIG_SERVER_ADDR: nacos:8848
+  SPRING_CLOUD_NACOS_DISCOVERY_NAMESPACE: homeservice
+  SPRING_CLOUD_NACOS_CONFIG_NAMESPACE: homeservice
+  SPRING_CLOUD_NACOS_DISCOVERY_USERNAME: nacos
+  SPRING_CLOUD_NACOS_DISCOVERY_PASSWORD: nacos
+  SPRING_CLOUD_NACOS_CONFIG_USERNAME: nacos
+  SPRING_CLOUD_NACOS_CONFIG_PASSWORD: nacos
+  SPRING_RABBITMQ_HOST: rabbitmq
+  SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
+  SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASS:-guest}
+
+x-db-env: &db-env
+  SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/homeservice?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+  SPRING_DATASOURCE_USERNAME: root
+  SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:-lw211014ly}
+
+x-redis-env: &redis-env
+  SPRING_DATA_REDIS_HOST: redis
+  SPRING_DATA_REDIS_PORT: "6379"
+  SPRING_REDIS_HOST: redis
+  SPRING_REDIS_PORT: "6379"
+
+x-rabbitmq-env: &rabbitmq-env
+  SPRING_RABBITMQ_HOST: rabbitmq
+  SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USER:-guest}
+  SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASS:-guest}
+
+x-seata-env: &seata-env
+  SEATA_SERVICE_GROUPLIST_DEFAULT: seata-server:8091
+  SEATA_CONFIG_NACOS_SERVER_ADDR: nacos:8848
+  SEATA_REGISTRY_NACOS_SERVER_ADDR: nacos:8848
+  SEATA_CONFIG_NACOS_USERNAME: nacos
+  SEATA_CONFIG_NACOS_PASSWORD: nacos
+  SEATA_REGISTRY_NACOS_USERNAME: nacos
+  SEATA_REGISTRY_NACOS_PASSWORD: nacos
+  SEATA_CONFIG_NACOS_NAMESPACE: homeservice
+  SEATA_REGISTRY_NACOS_NAMESPACE: homeservice
+
+x-microservice-base: &microservice-base
+  build:
+    context: ./homeservice
+    dockerfile: Dockerfile.local
+  restart: unless-stopped
+  networks:
+    - homeservice-net
+  depends_on:
+    nacos-init:
+      condition: service_completed_successfully
+    mysql:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+
+  # ============================================
+  # 基础设施服务
+  # ============================================
+
+  # ============================================
+  # MySQL 8.0 - 数据库
+  # ============================================
+  mysql:
+    image: mysql:8.0
+    container_name: homeservice-mysql
+    restart: unless-stopped
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-lw211014ly}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-homeservice}
+      TZ: Asia/Shanghai
+    volumes:
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - mysql-data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+      - --max_connections=500
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-lw211014ly}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - homeservice-net
+
+  # Redis 7 - 缓存（端口 6380 映射到宿主机，避免与本地 Redis 冲突）
+  redis:
+    image: redis:7-alpine
+    container_name: homeservice-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - homeservice-net
+
+  # Nacos 2.3.2 - 注册中心 & 配置中心
+  nacos:
+    image: nacos/nacos-server:v2.3.2
+    container_name: homeservice-nacos
+    restart: unless-stopped
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+      - "9849:9849"
+    environment:
+      - MODE=standalone
+      - PREFER_HOST_MODE=hostname
+      - NACOS_AUTH_ENABLE=true
+      - NACOS_AUTH_IDENTITY_KEY=nacos
+      - NACOS_AUTH_IDENTITY_VALUE=nacos
+      - NACOS_AUTH_TOKEN=${NACOS_AUTH_TOKEN:-VGhpc0lzTXlDdXN0b21TZWNyZXRLZXkwMTIzNDU2Nzg5MGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6}
+    volumes:
+      - nacos-logs:/home/nacos/logs
+      - nacos-data:/home/nacos/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -u nacos:nacos 'http://localhost:8848/nacos/v1/console/health/readiness' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 40s
+    networks:
+      - homeservice-net
+
+  # RabbitMQ 3.12 - 消息队列
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: homeservice-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS:-guest}
+      - RABBITMQ_DEFAULT_VHOST=/
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+    networks:
+      - homeservice-net
+
+  # Seata 1.8.0 - 分布式事务协调器
+  seata-server:
+    image: seataio/seata-server:1.8.0
+    container_name: homeservice-seata
+    restart: unless-stopped
+    ports:
+      - "8091:8091"
+      - "7091:7091"
+    environment:
+      - SEATA_PORT=8091
+      - SEATA_IP=homeservice-seata
+      - STORE_MODE=db
+      - SERVER_NODE=1
+    volumes:
+      - ./config/seata-server-application.yml:/seata-server/resources/application.yml:ro
+      - seata-logs:/seata-server/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:7091 || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 40s
+    networks:
+      - homeservice-net
+
+  # Nacos 初始化 - 导入配置
+  nacos-init:
+    image: curlimages/curl:latest
+    container_name: homeservice-nacos-init
+    depends_on:
+      nacos:
+        condition: service_healthy
+    volumes:
+      - ./scripts/nacos-init.sh:/init.sh:ro
+      - ./config/nacos-configs:/nacos-configs:ro
+    entrypoint: ["/bin/sh", "/init.sh"]
+    networks:
+      - homeservice-net
+
+  # ============================================
+  # 微服务 - 认证服务 (8081)
+  # ============================================
+  homeservice-auth:
+    <<: *microservice-base
+    container_name: homeservice-auth
+    build:
+      context: ./homeservice
+      dockerfile: Dockerfile.local
+      args:
+        MODULE: homeservice-auth
+    ports:
+      - "8081:8081"
+    environment:
+      <<: [*common-env, *db-env, *redis-env]
+      SERVER_PORT: "8081"
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  # ============================================
+  # 微服务 - 系统配置服务 (8095)
+  # ============================================
+  homeservice-config:
+    <<: *microservice-base
+    container_name: homeservice-config
+    build:
+      context: ./homeservice
+      dockerfile: Dockerfile.local
+      args:
+        MODULE: homeservice-config
+    ports:
+      - "8095:8095"
+    environment:
+      <<: [*common-env, *db-env, *redis-env]
+      SERVER_PORT: "8095"
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  # ============================================
+  # 微服务 - 用户服务 (8082)
+  # ============================================
+  homeservice-user:
+    <<: *microservice-base
+    container_name: homeservice-user
+    build:
+      context: ./homeservice
+      dockerfile: Dockerfile.local
+      args:
+        MODULE: homeservice-user
+    ports:
+      - "8082:8082"
+    environment:
+      <<: [*common-env, *db-env, *redis-env]
+      SERVER_PORT: "8082"
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  # ============================================
+  # 微服务 - 网关服务 (8083)
+  # ============================================
+  homeservice-gateway:
+    <<: *microservice-base
+    container_name: homeservice-gateway
+    build:
+      context: ./homeservice
+      dockerfile: Dockerfile.local
+      args:
+        MODULE: homeservice-gateway
+    ports:
+      - "8083:8083"
+    environment:
+      <<: [*common-env, *redis-env]
+      SERVER_PORT: "8083"
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  # ============================================
+  # 微服务 - 服务目录服务 (8084)
+  # ============================================
+  homeservice-service:
+    <<: *microservice-base
+    container_name: homeservice-service
+    build:
+      context: ./homeservice
+      dockerfile: Dockerfile.local
+      args:
+        MODULE: homeservice-service
+    ports:
+      - "8084:8084"
+    environment:
+      <<: [*common-env, *db-env, *redis-env]
+      SERVER_PORT: "8084"
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  # ============================================
+  # 微服务 - 支付服务 (8085)
+  # ============================================
+  homeservice-payment:
+    <<: *microservice-base
+    container_name: homeservice-payment
+    build:
+      context: ./homeservice
+      dockerfile: Dockerfile.local
+      args:
+        MODULE: homeservice-payment
+    ports:
+      - "8085:8085"
+    environment:
+      <<: [*common-env, *db-env, *redis-env, *rabbitmq-env, *seata-env]
+      SERVER_PORT: "8085"
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      seata-server:
+        condition: service_healthy
+
+  # ============================================
+  # 微服务 - 评价服务 (8086)
+  # ============================================
+  homeservice-review:
+    <<: *microservice-base
+    container_name: homeservice-review
+    build:
+      context: ./homeservice
+      dockerfile: Dockerfile.local
+      args:
+        MODULE: homeservice-review
+    ports:
+      - "8086:8086"
+    environment:
+      <<: [*common-env, *db-env, *redis-env]
+      SERVER_PORT: "8086"
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  # ============================================
+  # 微服务 - 营销服务 (8087)
+  # ============================================
+  homeservice-marketing:
+    <<: *microservice-base
+    container_name: homeservice-marketing
+    build:
+      context: ./homeservice
+      dockerfile: Dockerfile.local
+      args:
+        MODULE: homeservice-marketing
+    ports:
+      - "8087:8087"
+    environment:
+      <<: [*common-env, *db-env, *redis-env]
+      SERVER_PORT: "8087"
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  # ============================================
+  # 微服务 - 统计服务 (8088)
+  # ============================================
+  homeservice-statistics:
+    <<: *microservice-base
+    container_name: homeservice-statistics
+    build:
+      context: ./homeservice
+      dockerfile: Dockerfile.local
+      args:
+        MODULE: homeservice-statistics
+    ports:
+      - "8088:8088"
+    environment:
+      <<: [*common-env, *db-env, *redis-env]
+      SERVER_PORT: "8088"
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  # ============================================
+  # 微服务 - 定位服务 (8089)
+  # ============================================
+  homeservice-location:
+    <<: *microservice-base
+    container_name: homeservice-location
+    build:
+      context: ./homeservice
+      dockerfile: Dockerfile.local
+      args:
+        MODULE: homeservice-location
+    ports:
+      - "8089:8089"
+    environment:
+      <<: [*common-env, *redis-env]
+      SERVER_PORT: "8089"
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  # ============================================
+  # 微服务 - 通知服务 (8090)
+  # ============================================
+  homeservice-notify:
+    <<: *microservice-base
+    container_name: homeservice-notify
+    build:
+      context: ./homeservice
+      dockerfile: Dockerfile.local
+      args:
+        MODULE: homeservice-notify
+    ports:
+      - "8090:8090"
+    environment:
+      <<: [*common-env, *redis-env, *rabbitmq-env]
+      SERVER_PORT: "8090"
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # ============================================
+  # 微服务 - 订单服务 (8092)
+  # ============================================
+  homeservice-order:
+    <<: *microservice-base
+    container_name: homeservice-order
+    build:
+      context: ./homeservice
+      dockerfile: Dockerfile.local
+      args:
+        MODULE: homeservice-order
+    ports:
+      - "8092:8092"
+    environment:
+      <<: [*common-env, *db-env, *redis-env, *rabbitmq-env, *seata-env]
+      SERVER_PORT: "8092"
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      seata-server:
+        condition: service_healthy
+
+  # ============================================
+  # 微服务 - 调度派单服务 (8093)
+  # ============================================
+  homeservice-dispatch:
+    <<: *microservice-base
+    container_name: homeservice-dispatch
+    build:
+      context: ./homeservice
+      dockerfile: Dockerfile.local
+      args:
+        MODULE: homeservice-dispatch
+    ports:
+      - "8093:8093"
+    environment:
+      <<: [*common-env, *redis-env, *rabbitmq-env]
+      SERVER_PORT: "8093"
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  # ============================================
+  # 微服务 - 财务服务 (8094)
+  # ============================================
+  homeservice-finance:
+    <<: *microservice-base
+    container_name: homeservice-finance
+    build:
+      context: ./homeservice
+      dockerfile: Dockerfile.local
+      args:
+        MODULE: homeservice-finance
+    ports:
+      - "8094:8094"
+    environment:
+      <<: [*common-env, *db-env, *redis-env]
+      SERVER_PORT: "8094"
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+
+  # ============================================
+  # 微服务 - 媒体服务 (8097)
+  # ============================================
+  homeservice-media:
+    <<: *microservice-base
+    container_name: homeservice-media
+    build:
+      context: ./homeservice
+      dockerfile: Dockerfile.local
+      args:
+        MODULE: homeservice-media
+    ports:
+      - "8097:8097"
+    environment:
+      <<: [*common-env, *db-env, *redis-env]
+      SERVER_PORT: "8097"
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    depends_on:
+      nacos-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+volumes:
+  mysql-data:
+    name: homeservice-mysql-data
+  redis-data:
+    name: homeservice-redis-data
+  nacos-logs:
+    name: homeservice-nacos-logs
+  nacos-data:
+    name: homeservice-nacos-data
+  rabbitmq-data:
+    name: homeservice-rabbitmq-data
+  seata-logs:
+    name: homeservice-seata-logs
+
+networks:
+  homeservice-net:
+    name: homeservice-net
+    driver: bridge

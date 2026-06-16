@@ -1,0 +1,9 @@
+# Review 服务共享配置 (Nacos)
+# dataId: review-common.yaml
+# group: DEFAULT_GROUP
+
+review:
+  # 评价配置
+  max-complaint-days: 30
+  rating-range: 1-5
+  min-comment-length: 5

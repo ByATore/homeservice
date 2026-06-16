@@ -1,0 +1,9 @@
+# Marketing 服务共享配置 (Nacos)
+# dataId: marketing-common.yaml
+# group: DEFAULT_GROUP
+
+marketing:
+  coupon:
+    # 优惠券配置
+    max-per-user: 10
+    default-expire-days: 30

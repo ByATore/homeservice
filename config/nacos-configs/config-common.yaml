@@ -1,0 +1,14 @@
+# Config 服务共享配置 (Nacos)
+# dataId: config-common.yaml
+# group: DEFAULT_GROUP
+
+config:
+  upload:
+    domain: https://upload.homeservice.com
+    max-file-size: 10MB
+  payment:
+    wechat:
+      app-id: your_wechat_app_id
+      mch-id: your_wechat_mch_id
+    alipay:
+      app-id: your_alipay_app_id

@@ -1,0 +1,18 @@
+# Payment 服务共享配置 (Nacos)
+# dataId: payment-common.yaml
+# group: DEFAULT_GROUP
+
+payment:
+  # 支付超时配置（分钟）
+  pay-timeout: 15
+
+  # 退款配置
+  refund:
+    auto-approve-days: 7
+    max-refund-ratio: 1.0
+
+  # 平台分佣比例
+  commission:
+    default-rate: 0.10
+    min-rate: 0.05
+    max-rate: 0.25

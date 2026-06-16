@@ -1,0 +1,21 @@
+# Order 服务共享配置 (Nacos)
+# dataId: order-common.yaml
+# group: DEFAULT_GROUP
+
+spring:
+  cache:
+    type: redis
+    redis:
+      time-to-live: 600000
+      cache-null-values: false
+
+order:
+  # 订单超时配置（分钟）
+  pay-timeout: 30
+  cancel-timeout: 24
+  auto-confirm-days: 7
+
+  # 订单限制
+  max-ongoing-orders: 5
+  min-preorder-hours: 1
+  max-preorder-days: 30

@@ -1,0 +1,41 @@
+# Maven 构建输出（排除编译产物 class 文件，但保留 JAR 包）
+**/target/**
+!**/target/*.jar
+**/.mvn/wrapper/maven-wrapper.jar
+
+# IDE 文件
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+.springBeans
+.sts4-cache
+
+# 日志
+*.log
+logs/
+work/
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# 临时文件
+*.tmp
+*.bak
+*.swp
+*~
+
+# 文档
+docs/
+*.md
+
+# 不需要的构建文件
+.DS_Store
+Thumbs.db

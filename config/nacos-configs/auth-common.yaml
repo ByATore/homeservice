@@ -1,0 +1,20 @@
+# Auth 服务共享配置 (Nacos)
+# dataId: auth-common.yaml
+# group: DEFAULT_GROUP
+
+spring:
+  security:
+    jwt:
+      secret: VGhpc0lzTXlDdXN0b21TZWNyZXRLZXkwMTIzNDU2Nzg5MGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6
+      access-token-expiration: 7200
+      refresh-token-expiration: 604800
+
+# 验证码配置
+auth:
+  sms:
+    code-length: 6
+    code-expiration: 300
+    resend-interval: 60
+  login:
+    max-retry: 5
+    lock-duration: 1800

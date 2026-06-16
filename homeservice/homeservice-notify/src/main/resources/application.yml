@@ -1,0 +1,46 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: homeservice-notify
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+        namespace: homeservice
+        username: nacos
+        password: nacos
+      config:
+        import-check:
+          enabled: false
+        server-addr: localhost:8848
+        namespace: homeservice
+        file-extension: yaml
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    virtual-host: /
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 11
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 0
+
+notify:
+  sms:
+    provider: aliyun
+  push:
+    provider: jpush

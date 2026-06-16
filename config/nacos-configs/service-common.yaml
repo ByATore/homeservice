@@ -1,0 +1,9 @@
+# Service 服务共享配置 (Nacos)
+# dataId: service-common.yaml
+# group: DEFAULT_GROUP
+
+service:
+  catalog:
+    # 服务目录配置
+    max-items-per-category: 50
+    cache-ttl: 3600

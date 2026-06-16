@@ -1,0 +1,8 @@
+# User 服务共享配置 (Nacos)
+# dataId: user-common.yaml
+# group: DEFAULT_GROUP
+
+user:
+  # 用户配置
+  default-avatar: https://cdn.homeservice.com/default-avatar.png
+  max-address-count: 10
